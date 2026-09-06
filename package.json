@@ -1,0 +1,18 @@
+{
+  "name": "photo-ai-metadata",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@contentauth/c2pa-web": "0.14.4",
+    "exifreader": "4.44.1"
+  },
+  "devDependencies": {
+    "vite": "8.2.2"
+  }
+}
