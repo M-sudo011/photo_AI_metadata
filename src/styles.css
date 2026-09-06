@@ -469,7 +469,7 @@ button:disabled {
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
   margin-bottom: 20px;
 }
@@ -497,6 +497,183 @@ button:disabled {
   font-size: 0.92rem;
   font-weight: 700;
   overflow-wrap: anywhere;
+}
+
+.ai-declaration {
+  margin-bottom: 20px;
+  padding: 17px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-muted);
+}
+
+.ai-declaration.detected {
+  border-color: color-mix(in srgb, var(--warning) 35%, var(--line));
+  background: color-mix(in srgb, var(--warning-soft) 72%, var(--surface));
+}
+
+.ai-declaration.unavailable {
+  border-color: color-mix(in srgb, var(--danger) 28%, var(--line));
+  background: color-mix(in srgb, var(--danger-soft) 62%, var(--surface));
+}
+
+.ai-declaration-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ai-declaration-eyebrow {
+  margin: 0 0 5px;
+  color: var(--text-soft);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+}
+
+.ai-declaration-title {
+  margin: 0;
+  font-size: 1.08rem;
+  line-height: 1.35;
+}
+
+.ai-result-badge {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 27px;
+  padding: 4px 9px;
+  color: var(--text-soft);
+  font-size: 0.72rem;
+  font-weight: 800;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.ai-result-badge.detected {
+  color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 26%, transparent);
+  background: var(--warning-soft);
+}
+
+.ai-result-badge.unavailable {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 24%, transparent);
+  background: var(--danger-soft);
+}
+
+.ai-declaration-summary {
+  max-width: 820px;
+  margin: 11px 0 14px;
+  color: var(--text-soft);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.ai-declaration-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+}
+
+.ai-fact {
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid color-mix(in srgb, var(--line) 85%, transparent);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+}
+
+.ai-fact-label,
+.ai-fact-value {
+  display: block;
+}
+
+.ai-fact-label {
+  margin-bottom: 4px;
+  color: var(--text-soft);
+  font-size: 0.68rem;
+  font-weight: 780;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ai-fact-value {
+  font-size: 0.84rem;
+  font-weight: 720;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.ai-evidence {
+  margin-top: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+}
+
+.ai-evidence.warning {
+  border-color: color-mix(in srgb, var(--warning) 28%, var(--line));
+}
+
+.ai-evidence > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 42px;
+  padding: 9px 11px;
+  font-size: 0.8rem;
+  font-weight: 760;
+  list-style: none;
+  cursor: pointer;
+}
+
+.ai-evidence > summary::-webkit-details-marker {
+  display: none;
+}
+
+.ai-evidence-list {
+  display: grid;
+  gap: 1px;
+  border-top: 1px solid var(--line);
+  background: var(--line);
+}
+
+.ai-evidence-item {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 11px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  background: var(--surface);
+}
+
+.ai-evidence-item strong {
+  font-size: 0.8rem;
+}
+
+.ai-evidence-item code {
+  color: var(--text-soft);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.7rem;
+  overflow-wrap: anywhere;
+}
+
+.ai-evidence-explanation {
+  color: var(--text-soft);
+}
+
+.ai-declaration-limitation {
+  margin: 12px 0 0;
+  color: var(--text-soft);
+  font-size: 0.76rem;
+  line-height: 1.5;
 }
 
 .inspection-section {
@@ -799,6 +976,22 @@ footer p {
 
   .summary-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .ai-declaration {
+    padding: 14px;
+  }
+
+  .ai-declaration-header {
+    display: block;
+  }
+
+  .ai-result-badge {
+    margin-top: 8px;
+  }
+
+  .ai-declaration-facts {
+    grid-template-columns: 1fr;
   }
 
   .metadata-row,

@@ -1,6 +1,7 @@
 import ExifReader from 'exifreader';
 import { createC2pa } from '@contentauth/c2pa-web';
 import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
+import { assessC2paAiDeclaration } from './c2pa-ai.js';
 import './styles.css';
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
@@ -103,9 +104,10 @@ async function inspectFile(file) {
   ]);
 
   const container = inspectContainer(bytes, detected.kind);
+  const aiDeclaration = assessC2paAiDeclaration(c2pa);
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     generatedAt: new Date().toISOString(),
     processingMilliseconds: Math.round((performance.now() - startedAt) * 10) / 10,
     file: {
@@ -125,6 +127,7 @@ async function inspectFile(file) {
     container,
     standardMetadata,
     c2pa,
+    aiDeclaration,
   };
 }
 
@@ -615,6 +618,7 @@ function renderReport(card, file, report) {
   } else {
     body.append(
       renderSummary(report),
+      renderAiDeclarationSection(report.aiDeclaration, report.c2pa),
       renderFileSection(report),
       renderC2paSection(report.c2pa),
       renderStandardMetadataSection(report.standardMetadata),
@@ -628,9 +632,11 @@ function renderReport(card, file, report) {
 
 function reportStatusChip(report) {
   if (report.status === 'rejected') return element('span', 'status-chip danger', 'Could not inspect');
+  if (report.aiDeclaration?.status === 'detected') {
+    return element('span', 'status-chip warning', 'AI declaration found');
+  }
   if (report.c2pa?.status === 'found') {
-    const state = c2paValidationState(report.c2pa.manifestStore);
-    return element('span', `status-chip ${state === 'Invalid' ? 'danger' : ''}`.trim(), `C2PA: ${state}`);
+    return element('span', 'status-chip neutral', 'C2PA · no AI declaration');
   }
   if (report.c2pa?.status === 'error') return element('span', 'status-chip warning', 'C2PA unreadable');
   return element('span', 'status-chip neutral', 'No C2PA found');
@@ -645,14 +651,23 @@ function renderSummary(report) {
   const c2paText = report.c2pa.status === 'found'
     ? c2paValidationState(report.c2pa.manifestStore)
     : report.c2pa.status === 'not-found' ? 'Not found' : 'Unavailable';
+  const aiText = aiDeclarationSummary(report.aiDeclaration);
 
   grid.append(
     summaryItem('Format', report.file.detectedFormat),
     summaryItem('Dimensions', dimensions),
     summaryItem('Metadata entries', String(metadataCount)),
     summaryItem('C2PA', c2paText),
+    summaryItem('AI declaration', aiText),
   );
   return grid;
+}
+
+function aiDeclarationSummary(assessment) {
+  if (assessment?.status === 'detected') return assessment.label || 'Found';
+  if (assessment?.status === 'not-detected') return 'Not found in C2PA';
+  if (assessment?.status === 'unavailable') return 'Could not assess';
+  return 'Not assessed';
 }
 
 function summaryItem(label, value) {
@@ -672,6 +687,98 @@ function renderFileSection(report) {
     { key: 'Processing time', description: `${report.processingMilliseconds} ms`, raw: null },
   ];
   return detailsSection('File information', rows.length, renderRows(rows), true);
+}
+
+function renderAiDeclarationSection(assessment, c2pa) {
+  const status = assessment?.status || 'not-assessed';
+  const tone = status === 'detected'
+    ? 'detected'
+    : status === 'unavailable' ? 'unavailable' : 'neutral';
+  const section = element('section', `ai-declaration ${tone}`);
+  section.setAttribute('aria-labelledby', `ai-declaration-${Math.random().toString(36).slice(2)}`);
+
+  const header = element('div', 'ai-declaration-header');
+  const headingWrap = element('div');
+  const eyebrow = element('p', 'ai-declaration-eyebrow', 'C2PA interpretation');
+  const heading = element('h4', 'ai-declaration-title', aiDeclarationHeading(assessment));
+  heading.id = section.getAttribute('aria-labelledby');
+  headingWrap.append(eyebrow, heading);
+  header.append(headingWrap, element('span', `ai-result-badge ${tone}`, aiDeclarationBadge(assessment)));
+
+  section.append(header, element('p', 'ai-declaration-summary', assessment?.summary || 'No assessment is available.'));
+
+  const facts = element('div', 'ai-declaration-facts');
+  facts.append(
+    aiFact('C2PA manifest', c2pa?.status === 'found' ? 'Found' : c2pa?.status === 'error' ? 'Unreadable' : 'Not found'),
+    aiFact('C2PA validation', c2pa?.status === 'found' ? c2paValidationState(c2pa.manifestStore) : 'Not available'),
+  );
+
+  if (status === 'detected') {
+    facts.append(
+      aiFact('Declaration', assessment.label || 'AI involvement declared'),
+      aiFact('Named AI source', assessment.providers?.length ? assessment.providers.join(', ') : 'Not specified'),
+    );
+  }
+  section.append(facts);
+
+  if (assessment?.signals?.length) {
+    section.append(aiEvidenceDetails('Matched declaration evidence', assessment.signals, true));
+  }
+  if (assessment?.context?.length) {
+    section.append(aiEvidenceDetails('Manifest and signer context', assessment.context, false));
+  }
+  if (assessment?.validationWarnings?.length) {
+    section.append(aiEvidenceDetails('Validation or trust warnings', assessment.validationWarnings, false, 'warning'));
+  }
+
+  section.append(element('p', 'ai-declaration-limitation', assessment?.limitation || 'A metadata result is not a pixel-level authenticity assessment.'));
+  return section;
+}
+
+function aiDeclarationHeading(assessment) {
+  if (assessment?.status === 'detected') return assessment.label || 'AI declaration found';
+  if (assessment?.status === 'not-detected') return 'No supported AI declaration found';
+  if (assessment?.status === 'unavailable') return 'AI declaration could not be assessed';
+  return 'No C2PA AI declaration to assess';
+}
+
+function aiDeclarationBadge(assessment) {
+  if (assessment?.status === 'detected') return 'Declaration found';
+  if (assessment?.status === 'not-detected') return 'Not detected';
+  if (assessment?.status === 'unavailable') return 'Unavailable';
+  return 'Not assessed';
+}
+
+function aiFact(label, value) {
+  const item = element('div', 'ai-fact');
+  item.append(element('span', 'ai-fact-label', label), element('span', 'ai-fact-value', value));
+  return item;
+}
+
+function aiEvidenceDetails(title, items, open = false, tone = '') {
+  const details = document.createElement('details');
+  details.className = `ai-evidence ${tone}`.trim();
+  details.open = Boolean(open);
+
+  const summary = document.createElement('summary');
+  summary.append(element('span', '', title), element('span', 'count-badge', String(items.length)));
+  const list = element('div', 'ai-evidence-list');
+
+  for (const item of items) {
+    const evidence = element('div', 'ai-evidence-item');
+    evidence.append(
+      element('strong', '', item.label || item.type || 'Evidence'),
+      element('span', '', item.value || item.explanation || '—'),
+    );
+    if (item.explanation && item.explanation !== item.value) {
+      evidence.append(element('span', 'ai-evidence-explanation', item.explanation));
+    }
+    if (item.path) evidence.append(element('code', '', item.path));
+    list.append(evidence);
+  }
+
+  details.append(summary, list);
+  return details;
 }
 
 function renderC2paSection(c2pa) {
